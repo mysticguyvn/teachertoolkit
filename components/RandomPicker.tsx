@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Dices, Sparkles, Trash2, Users, Grid, RotateCw } from 'lucide-react';
+import { Dices, Sparkles, Trash2, Users, Grid, RotateCw, Maximize2, Minimize2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 
@@ -8,6 +8,7 @@ type Mode = 'wheel' | 'groups';
 const RandomPicker: React.FC = () => {
   const [inputNames, setInputNames] = useState('');
   const [mode, setMode] = useState<Mode>('wheel');
+  const [isFullscreen, setIsFullscreen] = useState(false);
   
   const [winner, setWinner] = useState<string | null>(null);
   const [isSpinning, setIsSpinning] = useState(false);
@@ -62,10 +63,11 @@ const RandomPicker: React.FC = () => {
     setCurrentName(winnerName);
     
     confetti({
-      particleCount: 100,
+      particleCount: 150,
       spread: 70,
       origin: { y: 0.6 },
-      colors: ['#8b5cf6', '#ec4899', '#3b82f6']
+      colors: ['#8b5cf6', '#ec4899', '#3b82f6'],
+      zIndex: 100 // ensure on top of fullscreen
     });
   };
 
@@ -92,6 +94,7 @@ const RandomPicker: React.FC = () => {
   }, []);
 
   return (
+    <>
     <div className="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden flex flex-col w-full">
       {/* HEADER */}
       <div className="bg-purple-600 p-4 flex justify-between items-center shrink-0">
@@ -115,22 +118,30 @@ const RandomPicker: React.FC = () => {
                 Chia Nhóm
             </button>
         </div>
-        <button 
-            onClick={() => {
-                setInputNames('');
-                setWinner(null);
-                setGroups([]);
-            }}
-            className="text-purple-200 hover:text-white transition-colors p-1.5 hover:bg-purple-500 rounded-lg"
-            title="Xóa danh sách"
-        >
-            <Trash2 className="w-5 h-5" />
-        </button>
+        <div className="flex items-center gap-2">
+            <button 
+                onClick={() => {
+                    setInputNames('');
+                    setWinner(null);
+                    setGroups([]);
+                }}
+                className="text-purple-200 hover:text-white transition-colors p-1.5 hover:bg-purple-500 rounded-lg"
+                title="Xóa danh sách"
+            >
+                <Trash2 className="w-5 h-5" />
+            </button>
+            <button 
+                onClick={() => setIsFullscreen(true)}
+                className="p-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-white transition-colors"
+            >
+                <Maximize2 className="w-5 h-5" />
+            </button>
+        </div>
       </div>
 
-      {/* CONTENT - BLOCK LAYOUT (NO FLEX-1) */}
+      {/* CONTENT */}
       <div>
-        {/* RESULT AREA (Fixed Height) */}
+        {/* RESULT AREA */}
         <div className="bg-slate-50 h-64 border-b border-slate-200 relative overflow-hidden">
             {mode === 'wheel' && (
                 <div className="flex flex-col items-center justify-center h-full p-4">
@@ -186,7 +197,7 @@ const RandomPicker: React.FC = () => {
             )}
         </div>
 
-        {/* INPUT AREA (Stacked Below) */}
+        {/* INPUT AREA */}
         <div className="p-4 bg-white flex flex-col gap-3">
             <div className="relative w-full">
                 <textarea
@@ -237,6 +248,76 @@ const RandomPicker: React.FC = () => {
         </div>
       </div>
     </div>
+
+    {/* FULLSCREEN OVERLAY */}
+    <AnimatePresence>
+        {isFullscreen && (
+            <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="fixed inset-0 z-50 bg-purple-900/95 backdrop-blur-sm flex flex-col p-6"
+            >
+                 <div className="flex justify-end">
+                    <button 
+                        onClick={() => setIsFullscreen(false)}
+                        className="p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
+                    >
+                        <Minimize2 className="w-8 h-8" />
+                    </button>
+                 </div>
+
+                 <div className="flex-1 flex flex-col items-center justify-center">
+                    {mode === 'wheel' && (
+                        <div className="w-full max-w-4xl text-center">
+                            {winner ? (
+                                <motion.div
+                                    initial={{ scale: 0.5, opacity: 0 }}
+                                    animate={{ scale: 1.5, opacity: 1 }}
+                                    className="text-[8vw] font-extrabold text-white drop-shadow-2xl"
+                                >
+                                    🎉 {winner} 🎉
+                                </motion.div>
+                            ) : (
+                                <div className={`text-[6vw] font-bold text-purple-200/50 ${isSpinning ? 'text-white blur-sm' : ''}`}>
+                                    {isSpinning ? currentName : "Sẵn sàng..."}
+                                </div>
+                            )}
+
+                            <button
+                                onClick={handleSpin}
+                                disabled={isSpinning || namesList.length < 2}
+                                className="mt-12 px-12 py-6 text-2xl bg-white text-purple-600 rounded-2xl font-bold hover:bg-purple-50 disabled:opacity-50 shadow-2xl flex items-center justify-center gap-3 mx-auto"
+                            >
+                                <RotateCw className={`w-8 h-8 ${isSpinning ? 'animate-spin' : ''}`} />
+                                {isSpinning ? 'ĐANG QUAY...' : 'QUAY NGAY'}
+                            </button>
+                        </div>
+                    )}
+
+                    {mode === 'groups' && (
+                        <div className="w-full max-w-6xl h-[80vh] overflow-y-auto custom-scrollbar p-4">
+                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {groups.length > 0 ? groups.map((grp, idx) => (
+                                    <div key={idx} className="bg-white rounded-2xl p-6 shadow-xl">
+                                         <h3 className="text-2xl font-bold text-purple-600 mb-4 border-b border-purple-100 pb-2">Nhóm {idx + 1}</h3>
+                                         <ul className="space-y-2">
+                                            {grp.map((student, sIdx) => (
+                                                <li key={sIdx} className="text-lg text-slate-700 font-medium">• {student}</li>
+                                            ))}
+                                         </ul>
+                                    </div>
+                                )) : (
+                                    <div className="col-span-full text-center text-white/50 text-2xl">Chưa có nhóm nào được chia.</div>
+                                )}
+                             </div>
+                        </div>
+                    )}
+                 </div>
+            </motion.div>
+        )}
+    </AnimatePresence>
+    </>
   );
 };
 

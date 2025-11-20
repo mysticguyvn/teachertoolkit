@@ -6,6 +6,7 @@ import Timer from './components/Timer';
 import RandomPicker from './components/RandomPicker';
 import MessageBoard from './components/MessageBoard';
 import Scoreboard from './components/Scoreboard';
+import StudentLeaderboard from './components/StudentLeaderboard';
 
 const App: React.FC = () => {
   const [showSettings, setShowSettings] = useState(false);
@@ -52,7 +53,12 @@ const App: React.FC = () => {
 
         {/* Column 3 */}
         <div className="xl:col-span-1 md:col-span-2 w-full flex flex-col gap-8">
-           <Scoreboard />
+           <div className="w-full">
+              <Scoreboard />
+           </div>
+           <div className="w-full">
+              <StudentLeaderboard />
+           </div>
         </div>
       </div>
 

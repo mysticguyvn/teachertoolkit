@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Trophy, Plus, Minus, Target, Trash2, ArrowUpDown } from 'lucide-react';
+import { Trophy, Plus, Minus, Target, Trash2, ArrowUpDown, Maximize2, Minimize2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Team, TEAM_COLORS } from '../types';
 
@@ -10,6 +10,7 @@ const Scoreboard: React.FC = () => {
   ]);
   const [targetScore, setTargetScore] = useState(20);
   const [autoSort, setAutoSort] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const addTeam = () => {
     const nextColorIdx = teams.length % TEAM_COLORS.length;
@@ -49,6 +50,7 @@ const Scoreboard: React.FC = () => {
   const sortedTeams = autoSort ? [...teams].sort((a, b) => b.score - a.score) : teams;
 
   return (
+    <>
     <div className="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden flex flex-col w-full">
       {/* HEADER */}
       <div className="bg-amber-500 p-4 flex flex-col sm:flex-row justify-between items-center gap-3 shrink-0">
@@ -57,32 +59,40 @@ const Scoreboard: React.FC = () => {
           Bảng Thi Đua
         </h2>
         
-        <div className="flex items-center gap-3 bg-amber-600/50 p-1 rounded-lg">
-            <div className="flex items-center gap-2 px-2">
-                <Target className="w-4 h-4 text-amber-100" />
-                <input 
-                    type="number" 
-                    value={targetScore}
-                    onChange={(e) => setTargetScore(Number(e.target.value))}
-                    className="w-10 bg-transparent text-white font-bold text-sm outline-none text-center"
-                    title="Mục tiêu điểm"
-                />
+        <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3 bg-amber-600/50 p-1 rounded-lg">
+                <div className="flex items-center gap-2 px-2">
+                    <Target className="w-4 h-4 text-amber-100" />
+                    <input 
+                        type="number" 
+                        value={targetScore}
+                        onChange={(e) => setTargetScore(Number(e.target.value))}
+                        className="w-10 bg-transparent text-white font-bold text-sm outline-none text-center"
+                        title="Mục tiêu điểm"
+                    />
+                </div>
+                <div className="h-4 w-px bg-amber-400/50"></div>
+                <button 
+                    onClick={() => setAutoSort(!autoSort)}
+                    className={`p-1.5 rounded text-xs font-bold flex items-center gap-1 transition-colors ${
+                        autoSort ? 'bg-white text-amber-600' : 'text-amber-100 hover:bg-amber-600'
+                    }`}
+                    title="Tự động sắp xếp"
+                >
+                    <ArrowUpDown className="w-3 h-3" />
+                    Auto
+                </button>
             </div>
-            <div className="h-4 w-px bg-amber-400/50"></div>
             <button 
-                onClick={() => setAutoSort(!autoSort)}
-                className={`p-1.5 rounded text-xs font-bold flex items-center gap-1 transition-colors ${
-                    autoSort ? 'bg-white text-amber-600' : 'text-amber-100 hover:bg-amber-600'
-                }`}
-                title="Tự động sắp xếp"
+                onClick={() => setIsFullscreen(true)}
+                className="p-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-white transition-colors"
             >
-                <ArrowUpDown className="w-3 h-3" />
-                Auto
+                <Maximize2 className="w-5 h-5" />
             </button>
         </div>
       </div>
 
-      {/* TEAM LIST AREA - Fixed max height with scroll */}
+      {/* TEAM LIST AREA */}
       <div className="p-4 bg-slate-50 overflow-y-auto custom-scrollbar max-h-[500px]">
         <AnimatePresence initial={false} mode="popLayout">
             <div className="flex flex-col gap-3">
@@ -92,7 +102,6 @@ const Scoreboard: React.FC = () => {
 
                     return (
                         <motion.div
-                            layout
                             key={team.id}
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
@@ -106,10 +115,9 @@ const Scoreboard: React.FC = () => {
                                 className="absolute bottom-0 left-0 h-1 transition-all duration-500 ease-out"
                                 style={{ 
                                     width: `${progress}%`, 
-                                    backgroundColor: team.color.replace('bg-', 'text-').replace('500', '500') // Hacky way to map color, better to use CSS var or map
+                                    backgroundColor: team.color.replace('bg-', 'text-').replace('500', '500') 
                                 }} 
                             />
-                             {/* We'll just use the team.color class for a dot instead of dynamic bg string parsing for now */}
 
                             <div className="flex items-center gap-3 relative z-10">
                                 {/* Color/Rank Indicator */}
@@ -186,6 +194,70 @@ const Scoreboard: React.FC = () => {
         </button>
       </div>
     </div>
+
+    {/* FULLSCREEN OVERLAY */}
+    <AnimatePresence>
+        {isFullscreen && (
+            <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="fixed inset-0 z-50 bg-slate-900 flex flex-col p-6"
+            >
+                <div className="flex justify-between items-center mb-8">
+                    <h1 className="text-3xl font-bold text-amber-500 flex items-center gap-3">
+                        <Trophy className="w-10 h-10" />
+                        BẢNG THI ĐUA
+                    </h1>
+                    <div className="flex gap-4">
+                        <button
+                            onClick={addTeam}
+                            className="px-6 py-2 bg-amber-600 text-white rounded-lg font-bold hover:bg-amber-700"
+                        >
+                            + Thêm Nhóm
+                        </button>
+                        <button 
+                            onClick={() => setIsFullscreen(false)}
+                            className="p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
+                        >
+                            <Minimize2 className="w-8 h-8" />
+                        </button>
+                    </div>
+                </div>
+
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                         {sortedTeams.map((team) => {
+                             const progress = Math.min(100, Math.max(0, (team.score / targetScore) * 100));
+                             return (
+                                <div key={team.id} className="bg-slate-800 rounded-2xl p-6 border border-slate-700 shadow-xl relative overflow-hidden">
+                                     <div 
+                                        className={`absolute bottom-0 left-0 h-2 ${team.color}`}
+                                        style={{ width: `${progress}%` }}
+                                    />
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div className={`w-3 h-16 rounded-full ${team.color}`}></div>
+                                        <div className="flex-1 ml-4">
+                                             <h3 className="text-3xl font-bold text-white mb-1">{team.name}</h3>
+                                             <div className="text-slate-400 text-sm font-medium">{progress.toFixed(0)}% Hoàn thành</div>
+                                        </div>
+                                        <div className="text-5xl font-bold text-white tabular-nums">{team.score}</div>
+                                    </div>
+                                    
+                                    <div className="flex gap-2 mt-6">
+                                        <button onClick={() => updateScore(team.id, -1)} className="flex-1 py-3 bg-white/10 hover:bg-white/20 rounded-lg text-white font-bold text-xl">-1</button>
+                                        <button onClick={() => updateScore(team.id, 1)} className="flex-1 py-3 bg-white/10 hover:bg-white/20 rounded-lg text-white font-bold text-xl">+1</button>
+                                        <button onClick={() => updateScore(team.id, 5)} className="px-4 py-3 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-white font-bold text-xl">+5</button>
+                                    </div>
+                                </div>
+                             )
+                         })}
+                    </div>
+                </div>
+            </motion.div>
+        )}
+    </AnimatePresence>
+    </>
   );
 };
 
