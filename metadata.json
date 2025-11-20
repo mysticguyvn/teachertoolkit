@@ -1,0 +1,7 @@
+{
+  "name": "Lớp Học Thông Minh",
+  "description": "Bộ công cụ quản lý lớp học toàn diện với đo tiếng ồn, đồng hồ, vòng quay ngẫu nhiên và bảng điểm.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
