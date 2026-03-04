@@ -1,30 +1,80 @@
-import React, { useState, useEffect } from 'react';
-import { Medal, Star, Copy, ArrowUpDown, Maximize2, Minimize2, UserPlus, RotateCcw, Check, Plus, Trash2, Save } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Medal, Star, Copy, Maximize2, Minimize2, UserPlus, RotateCcw, Check, Plus, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Student, ClassGroup } from '../types';
 
-interface Student {
-  id: string;
-  name: string;
-  score: number;
+interface StudentLeaderboardProps {
+    activeClass?: ClassGroup;
+    onAutoSave?: (students: Student[]) => void;
 }
 
-const StudentLeaderboard: React.FC = () => {
+const StudentLeaderboard: React.FC<StudentLeaderboardProps> = ({ activeClass, onAutoSave }) => {
   const [students, setStudents] = useState<Student[]>([]);
   const [rawInput, setRawInput] = useState('');
   const [isInputMode, setIsInputMode] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [autoSort, setAutoSort] = useState(false); // Default off for fullscreen
+  const [autoSort, setAutoSort] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  // Confirmation Modal State
+  const [confirmAction, setConfirmAction] = useState<{ type: 'RESET' | 'DELETE', targetId?: string } | null>(null);
+
+  // Ref to track which class we have currently loaded.
+  const loadedClassIdRef = useRef<string | null>(null);
+
+  // --- LOAD DATA FROM ACTIVE CLASS ---
+  useEffect(() => {
+      // Only initialize/reload if the Class ID has actually changed.
+      if (activeClass?.id === loadedClassIdRef.current) {
+          return;
+      }
+
+      if (activeClass) {
+          loadedClassIdRef.current = activeClass.id; // Mark this class as loaded
+
+          if (activeClass.studentScores && activeClass.studentScores.length > 0) {
+              // Has saved scores -> Load them
+              setStudents(activeClass.studentScores);
+              setIsInputMode(false);
+          } else if (activeClass.students.length > 0) {
+              // No saved scores but has student list -> Init from list
+              const initialStudents = activeClass.students.map((name, idx) => ({
+                  id: `std-${idx}-${Date.now()}`,
+                  name: name,
+                  score: 0
+              }));
+              setStudents(initialStudents);
+              setIsInputMode(false);
+          } else {
+              // Class is empty -> Let user input or add
+              setStudents([]);
+              setIsInputMode(false); // Show empty state instead of input box for classes
+          }
+      } else {
+          // Switched to No Class (Manual Mode)
+          loadedClassIdRef.current = null;
+          setStudents([]);
+          setIsInputMode(true);
+      }
+  }, [activeClass?.id]);
 
   // Handle Fullscreen Toggle Logic
   useEffect(() => {
     if (isFullscreen) {
-        // Requirement: Default autoSort to false when entering fullscreen
         setAutoSort(false);
     }
   }, [isFullscreen]);
 
-  // Parse input text to create students
+  // --- EXPLICIT SAVE HELPER ---
+  // We use this instead of useEffect to prevent race conditions where empty state overwrites class data on load
+  const saveToClass = (currentStudents: Student[]) => {
+      if (activeClass && onAutoSave) {
+          onAutoSave(currentStudents);
+      }
+  };
+
+  // --- HANDLERS ---
+
   const handleImport = () => {
     if (!rawInput.trim()) return;
     
@@ -37,14 +87,7 @@ const StudentLeaderboard: React.FC = () => {
     
     setStudents(newStudents);
     setIsInputMode(false);
-  };
-
-  const handleReset = () => {
-      if (window.confirm("Bạn có chắc muốn xóa toàn bộ danh sách và làm mới không?")) {
-          setStudents([]);
-          setRawInput('');
-          setIsInputMode(true);
-      }
+    saveToClass(newStudents);
   };
 
   const handleAddStudent = () => {
@@ -53,24 +96,56 @@ const StudentLeaderboard: React.FC = () => {
           name: 'Học sinh mới',
           score: 0
       };
-      // Add to the end of the list
-      setStudents([...students, newStudent]);
-  };
-
-  const handleRemoveStudent = (id: string) => {
-      if (window.confirm("Xóa học sinh này?")) {
-          setStudents(students.filter(s => s.id !== id));
-      }
+      const updated = [...students, newStudent];
+      setStudents(updated);
+      saveToClass(updated);
   };
 
   const updateName = (id: string, newName: string) => {
-      setStudents(students.map(s => s.id === id ? { ...s, name: newName } : s));
+      const updated = students.map(s => s.id === id ? { ...s, name: newName } : s);
+      setStudents(updated);
+      saveToClass(updated);
   };
 
   const updateScore = (id: string, delta: number) => {
-      setStudents(prev => {
-          return prev.map(s => s.id === id ? { ...s, score: s.score + delta } : s);
-      });
+      const updated = students.map(s => s.id === id ? { ...s, score: s.score + delta } : s);
+      setStudents(updated);
+      saveToClass(updated);
+  };
+
+  // --- CONFIRMATION LOGIC ---
+  
+  const initiateReset = () => {
+      setConfirmAction({ type: 'RESET' });
+  };
+
+  const initiateDelete = (id: string) => {
+      setConfirmAction({ type: 'DELETE', targetId: id });
+  };
+
+  const executeConfirm = () => {
+      if (!confirmAction) return;
+
+      if (confirmAction.type === 'RESET') {
+          if (activeClass) {
+              // CLASS MODE: Reset scores to 0, KEEP the list
+              const resetStudents = students.map(s => ({ ...s, score: 0 }));
+              setStudents(resetStudents);
+              saveToClass(resetStudents);
+          } else {
+              // MANUAL MODE: Clear everything and go back to input
+              setStudents([]);
+              setRawInput('');
+              setIsInputMode(true);
+              // No need to save since no class is active
+          }
+      } else if (confirmAction.type === 'DELETE' && confirmAction.targetId) {
+          const updated = students.filter(s => s.id !== confirmAction.targetId);
+          setStudents(updated);
+          saveToClass(updated);
+      }
+      
+      setConfirmAction(null);
   };
 
   const handleExport = () => {
@@ -93,7 +168,7 @@ const StudentLeaderboard: React.FC = () => {
 
   return (
     <>
-    <div className="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden flex flex-col w-full">
+    <div className="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden flex flex-col w-full relative">
         {/* HEADER */}
         <div className="bg-pink-600 p-4 flex justify-between items-center shrink-0">
             <h2 className="text-lg font-bold text-white flex items-center gap-2">
@@ -144,9 +219,9 @@ const StudentLeaderboard: React.FC = () => {
                     <div className="flex justify-between items-center mb-2">
                         <span className="text-xs font-bold text-slate-400 uppercase">Top Dẫn Đầu</span>
                         <button 
-                            onClick={handleReset} 
+                            onClick={initiateReset} 
                             className="text-xs text-red-500 hover:bg-red-50 px-2 py-1 rounded flex items-center gap-1 transition-colors"
-                            title="Xóa danh sách và làm lại"
+                            title="Làm mới"
                         >
                             <RotateCcw className="w-3 h-3" /> Làm mới
                         </button>
@@ -155,7 +230,7 @@ const StudentLeaderboard: React.FC = () => {
                     {dashboardDisplay.length > 0 ? (
                         <div className="flex flex-col gap-2">
                             {dashboardDisplay.map((student, idx) => (
-                                <div key={student.id} className="flex items-center justify-between bg-slate-50 p-2 rounded-lg border border-slate-100">
+                                <div key={student.id} className="flex items-center justify-between bg-slate-50 p-2 rounded-lg border border-slate-100 group">
                                     <div className="flex items-center gap-3 overflow-hidden">
                                         <div className={`
                                             w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0
@@ -170,9 +245,16 @@ const StudentLeaderboard: React.FC = () => {
                                         {student.score >= 0 && <Star className="w-3 h-3 text-yellow-400 fill-current" />}
                                         <button 
                                             onClick={() => updateScore(student.id, 1)}
-                                            className="p-1 bg-white border border-pink-100 rounded hover:bg-pink-50 text-pink-600 transition-colors"
+                                            className="p-1 bg-white border border-pink-100 rounded hover:bg-pink-50 text-pink-600 transition-colors font-bold"
                                         >
                                             +1
+                                        </button>
+                                        <button 
+                                            onClick={() => initiateDelete(student.id)}
+                                            className="p-1 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                                            title="Xóa học sinh"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
                                         </button>
                                     </div>
                                 </div>
@@ -184,7 +266,14 @@ const StudentLeaderboard: React.FC = () => {
                             )}
                         </div>
                     ) : (
-                        <div className="text-center text-slate-400 py-4">Chưa có dữ liệu</div>
+                        <div className="h-32 flex flex-col items-center justify-center text-slate-400 gap-2">
+                            <p>Chưa có dữ liệu</p>
+                            {activeClass && (
+                                <button onClick={handleAddStudent} className="text-xs text-pink-500 font-bold hover:underline">
+                                    + Thêm học sinh
+                                </button>
+                            )}
+                        </div>
                     )}
                 </div>
             )}
@@ -212,6 +301,14 @@ const StudentLeaderboard: React.FC = () => {
                             className="px-4 py-2 bg-pink-600 text-white rounded-lg font-bold hover:bg-pink-700 flex items-center gap-2"
                         >
                             <Plus className="w-5 h-5" /> Thêm
+                        </button>
+
+                        <button
+                            onClick={initiateReset}
+                            className="px-4 py-2 bg-red-100 text-red-600 rounded-lg font-bold hover:bg-red-200 flex items-center gap-2 transition-colors"
+                            title="Làm mới / Xóa hết"
+                        >
+                            <RotateCcw className="w-5 h-5" /> Làm mới
                         </button>
 
                         <div className="flex items-center gap-2 bg-white/10 px-4 rounded-lg select-none cursor-pointer" onClick={() => setAutoSort(!autoSort)}>
@@ -244,7 +341,7 @@ const StudentLeaderboard: React.FC = () => {
                         <AnimatePresence>
                         {fullscreenDisplay.map((student, idx) => (
                             <motion.div 
-                                layout={autoSort} // Only animate layout if autoSort is enabled
+                                layout={autoSort} 
                                 key={student.id}
                                 className={`bg-white rounded-xl p-3 flex justify-between items-center shadow-lg border-l-4 group ${
                                     idx < 3 && autoSort ? 'border-yellow-400 bg-yellow-50' : 'border-pink-500'
@@ -284,9 +381,9 @@ const StudentLeaderboard: React.FC = () => {
                                     </div>
                                     
                                     <button 
-                                        onClick={() => handleRemoveStudent(student.id)}
-                                        className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors opacity-0 group-hover:opacity-100"
-                                        title="Xóa"
+                                        onClick={() => initiateDelete(student.id)}
+                                        className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                                        title="Xóa học sinh"
                                     >
                                         <Trash2 className="w-5 h-5" />
                                     </button>
@@ -303,6 +400,53 @@ const StudentLeaderboard: React.FC = () => {
                         </div>
                     )}
                 </div>
+            </motion.div>
+        )}
+    </AnimatePresence>
+
+    {/* CUSTOM CONFIRMATION MODAL */}
+    <AnimatePresence>
+        {confirmAction && (
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+                onClick={() => setConfirmAction(null)}
+            >
+                <motion.div 
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.9, opacity: 0 }}
+                    className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full border border-slate-200"
+                    onClick={e => e.stopPropagation()}
+                >
+                    <h3 className="text-xl font-bold text-slate-800 mb-4 text-center">Bạn có chắc không?</h3>
+                    
+                    <div className="bg-slate-50 p-4 rounded-xl mb-6 text-sm text-slate-600 border border-slate-100">
+                        {confirmAction.type === 'RESET' 
+                            ? activeClass 
+                                ? "Thao tác này sẽ đặt lại điểm của tất cả học sinh về 0. Danh sách lớp vẫn giữ nguyên."
+                                : "Thao tác này sẽ xóa toàn bộ danh sách và điểm số để nhập lại từ đầu."
+                            : "Học sinh này sẽ bị xóa khỏi bảng điểm."
+                        }
+                    </div>
+
+                    <div className="flex gap-3">
+                        <button 
+                            onClick={() => setConfirmAction(null)} 
+                            className="flex-1 py-3 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 transition-colors"
+                        >
+                            Không
+                        </button>
+                        <button 
+                            onClick={executeConfirm} 
+                            className="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600 shadow-lg shadow-red-200 transition-colors"
+                        >
+                            Có, Thực hiện
+                        </button>
+                    </div>
+                </motion.div>
             </motion.div>
         )}
     </AnimatePresence>

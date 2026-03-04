@@ -445,23 +445,23 @@ const NoiseMonitor: React.FC = () => {
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                className="fixed inset-0 z-50 bg-slate-900 flex flex-col items-center justify-center p-8"
+                className="fixed inset-0 z-50 bg-slate-900 flex flex-col items-center p-4 md:p-8 overflow-hidden"
             >
                 <button 
                     onClick={() => setIsFullscreen(false)}
-                    className="absolute top-6 right-6 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
+                    className="absolute top-4 right-4 md:top-6 md:right-6 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors z-50"
                 >
-                    <Minimize2 className="w-8 h-8" />
+                    <Minimize2 className="w-6 h-6 md:w-8 md:h-8" />
                 </button>
 
-                <h1 className="text-4xl font-bold text-white mb-12 tracking-wider flex items-center gap-4">
-                    <Volume2 className="w-10 h-10" />
+                <h1 className="text-2xl md:text-4xl font-bold text-white mb-4 md:mb-8 mt-2 tracking-wider flex items-center gap-4 shrink-0">
+                    <Volume2 className="w-8 h-8 md:w-10 md:h-10" />
                     GIÁM SÁT TIẾNG ỒN
                 </h1>
 
-                <div className="flex-1 flex flex-col items-center justify-center w-full max-w-4xl gap-12">
+                <div className="flex-1 flex flex-col items-center justify-center w-full max-w-4xl gap-4 md:gap-8 min-h-0">
                     <div 
-                        className={`w-64 h-64 md:w-96 md:h-96 rounded-full border-[8px] flex items-center justify-center transition-all duration-100 bg-slate-800`}
+                        className={`w-56 h-56 md:w-80 md:h-80 rounded-full border-[6px] md:border-[8px] flex items-center justify-center transition-all duration-100 bg-slate-800 shrink-0`}
                         style={{ 
                             borderColor: getRingColor(),
                             boxShadow: isListening ? `0 0 ${volume * 100}px ${getRingColor()}` : 'none',
@@ -470,10 +470,10 @@ const NoiseMonitor: React.FC = () => {
                     >
                         {isListening ? (
                             <div className="text-center">
-                                <span className="text-8xl md:text-9xl font-bold text-white tabular-nums">{Math.round(volume * 100)}</span>
+                                <span className="text-7xl md:text-8xl font-bold text-white tabular-nums">{Math.round(volume * 100)}</span>
                             </div>
                         ) : (
-                            <span className="text-2xl text-gray-500 font-medium">Đang tắt</span>
+                            <span className="text-xl md:text-2xl text-gray-500 font-medium">Đang tắt</span>
                         )}
                     </div>
 
@@ -481,26 +481,26 @@ const NoiseMonitor: React.FC = () => {
                     <canvas 
                         ref={fsCanvasRef} 
                         width={600} 
-                        height={150} 
-                        className="w-full h-32 md:h-48 rounded-2xl bg-slate-800 border border-slate-700 shadow-inner"
+                        height={120} 
+                        className="w-full h-24 md:h-32 rounded-2xl bg-slate-800 border border-slate-700 shadow-inner shrink-0"
                     />
 
-                    <div className="flex gap-6">
+                    <div className="flex gap-4 md:gap-6 shrink-0">
                         <button
                             onClick={isListening ? stopListening : startListening}
-                            className={`px-8 py-4 rounded-2xl text-xl font-bold flex items-center gap-3 transition-all ${
+                            className={`px-6 py-3 md:px-8 md:py-4 rounded-2xl text-lg md:text-xl font-bold flex items-center gap-3 transition-all ${
                                 isListening 
                                 ? 'bg-red-500 text-white hover:bg-red-600 shadow-lg shadow-red-900/50' 
                                 : 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-lg shadow-emerald-900/50'
                             }`}
                         >
-                            {isListening ? <><MicOff className="w-8 h-8" /> Tắt Mic</> : <><Mic className="w-8 h-8" /> Bật Mic</>}
+                            {isListening ? <><MicOff className="w-6 h-6 md:w-8 md:h-8" /> Tắt Mic</> : <><Mic className="w-6 h-6 md:w-8 md:h-8" /> Bật Mic</>}
                         </button>
                         <button 
                             onClick={triggerAlert}
-                            className="px-8 py-4 rounded-2xl text-xl font-bold bg-white text-red-600 hover:bg-red-50 border-2 border-red-500 transition-all flex items-center gap-3"
+                            className="px-6 py-3 md:px-8 md:py-4 rounded-2xl text-lg md:text-xl font-bold bg-white text-red-600 hover:bg-red-50 border-2 border-red-500 transition-all flex items-center gap-3"
                         >
-                            <AlertTriangle className="w-8 h-8" />
+                            <AlertTriangle className="w-6 h-6 md:w-8 md:h-8" />
                             Cảnh Báo
                         </button>
                     </div>

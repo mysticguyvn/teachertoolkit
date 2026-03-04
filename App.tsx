@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Settings, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import NoiseMonitor from './components/NoiseMonitor';
@@ -7,9 +7,85 @@ import RandomPicker from './components/RandomPicker';
 import MessageBoard from './components/MessageBoard';
 import Scoreboard from './components/Scoreboard';
 import StudentLeaderboard from './components/StudentLeaderboard';
+import ClassManager from './components/ClassManager';
+import { ClassGroup, Team, Student } from './types';
 
 const App: React.FC = () => {
   const [showSettings, setShowSettings] = useState(false);
+  
+  // --- GLOBAL STATE: CLASSES ---
+  const [classes, setClasses] = useState<ClassGroup[]>(() => {
+      const saved = localStorage.getItem('smart_classroom_classes');
+      return saved ? JSON.parse(saved) : [];
+  });
+
+  const [activeClassId, setActiveClassId] = useState<string | null>(() => {
+      return localStorage.getItem('smart_classroom_active_class') || null;
+  });
+
+  // Persist classes whenever they change
+  useEffect(() => {
+      localStorage.setItem('smart_classroom_classes', JSON.stringify(classes));
+  }, [classes]);
+
+  // Persist active class selection
+  useEffect(() => {
+      if (activeClassId) {
+          localStorage.setItem('smart_classroom_active_class', activeClassId);
+      } else {
+          localStorage.removeItem('smart_classroom_active_class');
+      }
+  }, [activeClassId]);
+
+  const handleAddClass = (newClass: ClassGroup) => {
+      setClasses([...classes, newClass]);
+  };
+
+  const handleUpdateClass = (updatedClass: ClassGroup) => {
+      setClasses(classes.map(c => c.id === updatedClass.id ? updatedClass : c));
+  };
+
+  const handleDeleteClass = (id: string) => {
+      setClasses(classes.filter(c => c.id !== id));
+      if (activeClassId === id) setActiveClassId(null);
+  };
+
+  // --- DATA SAVING HANDLERS FOR CHILDREN ---
+  
+  // Save Teams Data for a specific class
+  const handleSaveTeams = (teams: Team[]) => {
+      if (!activeClassId) return;
+      const updated = classes.map(c => {
+          if (c.id === activeClassId) {
+              return { ...c, teams };
+          }
+          return c;
+      });
+      setClasses(updated);
+      alert("Đã lưu bảng điểm nhóm cho lớp!");
+  };
+
+  // Auto-Save Student Scores (No alert needed, works in background)
+  // CRITICAL: Also update the base 'students' list so other components (Picker) stay in sync
+  const handleSaveStudentScores = (updatedStudents: Student[]) => {
+      if (!activeClassId) return;
+      
+      setClasses(prevClasses => prevClasses.map(c => {
+          if (c.id === activeClassId) {
+              // Extract names from the score objects to keep the simple name list in sync
+              const simpleStudentList = updatedStudents.map(s => s.name);
+              
+              return { 
+                  ...c, 
+                  studentScores: updatedStudents,
+                  students: simpleStudentList
+              };
+          }
+          return c;
+      }));
+  };
+
+  const activeClass = classes.find(c => c.id === activeClassId);
 
   return (
     <div className="min-h-screen bg-slate-100 p-4 md:p-8 font-sans text-slate-900">
@@ -30,6 +106,17 @@ const App: React.FC = () => {
         </button>
       </header>
 
+      <div className="max-w-7xl mx-auto mb-8">
+        <ClassManager 
+            classes={classes}
+            activeClassId={activeClassId}
+            onAddClass={handleAddClass}
+            onUpdateClass={handleUpdateClass}
+            onDeleteClass={handleDeleteClass}
+            onSelectClass={setActiveClassId}
+        />
+      </div>
+
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 items-start">
         {/* Column 1 */}
         <div className="flex flex-col gap-8 w-full">
@@ -47,17 +134,25 @@ const App: React.FC = () => {
             <Timer />
           </div>
           <div className="w-full">
-            <RandomPicker />
+            <RandomPicker 
+                activeClass={activeClass}
+            />
           </div>
         </div>
 
         {/* Column 3 */}
         <div className="xl:col-span-1 md:col-span-2 w-full flex flex-col gap-8">
            <div className="w-full">
-              <Scoreboard />
+              <Scoreboard 
+                activeClass={activeClass}
+                onSave={handleSaveTeams}
+              />
            </div>
            <div className="w-full">
-              <StudentLeaderboard />
+              <StudentLeaderboard 
+                activeClass={activeClass}
+                onAutoSave={handleSaveStudentScores}
+              />
            </div>
         </div>
       </div>
@@ -92,7 +187,7 @@ const App: React.FC = () => {
               <div className="space-y-4">
                 <div className="p-6 bg-slate-50 rounded-xl border border-slate-200 text-center text-slate-500">
                   <Settings className="w-10 h-10 mx-auto mb-2 opacity-50" />
-                  <p>Tính năng cài đặt đang được phát triển...</p>
+                  <p>Bạn có thể quản lý lớp học ngay ở màn hình chính!</p>
                 </div>
               </div>
 

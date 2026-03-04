@@ -5,6 +5,22 @@ export interface Team {
   color: string;
 }
 
+export interface Student {
+  id: string;
+  name: string;
+  score: number;
+}
+
+export interface ClassGroup {
+  id: string;
+  name: string;
+  students: string[]; // Danh sách tên học sinh gốc
+  
+  // Dữ liệu lưu trữ riêng cho từng lớp
+  studentScores?: Student[]; // Dữ liệu cho StudentLeaderboard
+  teams?: Team[]; // Dữ liệu cho Scoreboard
+}
+
 export interface ScoreboardSettings {
   targetScore: number;
   autoSort: boolean;

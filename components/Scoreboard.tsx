@@ -1,9 +1,14 @@
-import React, { useState } from 'react';
-import { Trophy, Plus, Minus, Target, Trash2, ArrowUpDown, Maximize2, Minimize2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Trophy, Plus, Minus, Target, Trash2, ArrowUpDown, Maximize2, Minimize2, Save } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Team, TEAM_COLORS } from '../types';
+import { Team, TEAM_COLORS, ClassGroup } from '../types';
 
-const Scoreboard: React.FC = () => {
+interface ScoreboardProps {
+    activeClass?: ClassGroup;
+    onSave?: (teams: Team[]) => void;
+}
+
+const Scoreboard: React.FC<ScoreboardProps> = ({ activeClass, onSave }) => {
   const [teams, setTeams] = useState<Team[]>([
     { id: '1', name: 'Nhóm 1', score: 0, color: TEAM_COLORS[0] },
     { id: '2', name: 'Nhóm 2', score: 0, color: TEAM_COLORS[8] },
@@ -11,6 +16,22 @@ const Scoreboard: React.FC = () => {
   const [targetScore, setTargetScore] = useState(20);
   const [autoSort, setAutoSort] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Load data when active class changes
+  useEffect(() => {
+      if (activeClass && activeClass.teams && activeClass.teams.length > 0) {
+          setTeams(activeClass.teams);
+      } else if (activeClass) {
+          // Class selected but no saved teams -> Reset to default
+          setTeams([
+            { id: '1', name: 'Nhóm 1', score: 0, color: TEAM_COLORS[0] },
+            { id: '2', name: 'Nhóm 2', score: 0, color: TEAM_COLORS[8] },
+          ]);
+      } else {
+           // No class -> Use local temporary storage or default
+           // (Optional: Could implement local storage for 'default' mode here too)
+      }
+  }, [activeClass]);
 
   const addTeam = () => {
     const nextColorIdx = teams.length % TEAM_COLORS.length;
@@ -47,6 +68,18 @@ const Scoreboard: React.FC = () => {
       setTeams(teams.map(t => t.id === id ? { ...t, name } : t));
   };
 
+  const handleSave = () => {
+      if (onSave) {
+          onSave(teams);
+      } else {
+          // Fallback for default mode if we want to persist locally without class
+          // For now, we just show alert if no class selected to be explicit
+          if (!activeClass) {
+              alert("Vui lòng tạo và chọn một Lớp học để lưu dữ liệu lâu dài!");
+          }
+      }
+  };
+
   const sortedTeams = autoSort ? [...teams].sort((a, b) => b.score - a.score) : teams;
 
   return (
@@ -60,6 +93,17 @@ const Scoreboard: React.FC = () => {
         </h2>
         
         <div className="flex items-center gap-2">
+            <button 
+                onClick={handleSave}
+                className={`flex items-center gap-1 px-2 py-1.5 rounded text-xs font-bold transition-colors ${
+                    activeClass ? 'bg-amber-700 hover:bg-amber-800 text-white' : 'bg-white/20 text-white hover:bg-white/30'
+                }`}
+                title={activeClass ? "Lưu vào lớp này" : "Chọn lớp để lưu"}
+            >
+                <Save className="w-3 h-3" />
+                {activeClass ? "Lưu" : "Lưu"}
+            </button>
+
             <div className="flex items-center gap-3 bg-amber-600/50 p-1 rounded-lg">
                 <div className="flex items-center gap-2 px-2">
                     <Target className="w-4 h-4 text-amber-100" />

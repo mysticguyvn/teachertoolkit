@@ -1,11 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Dices, Sparkles, Trash2, Users, Grid, RotateCw, Maximize2, Minimize2 } from 'lucide-react';
+import { Dices, Sparkles, Trash2, Users, Grid, RotateCw, Maximize2, Minimize2, FileDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
+import { ClassGroup } from '../types';
 
 type Mode = 'wheel' | 'groups';
 
-const RandomPicker: React.FC = () => {
+interface RandomPickerProps {
+    activeClass?: ClassGroup;
+}
+
+const RandomPicker: React.FC<RandomPickerProps> = ({ activeClass }) => {
   const [inputNames, setInputNames] = useState('');
   const [mode, setMode] = useState<Mode>('wheel');
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -18,6 +23,15 @@ const RandomPicker: React.FC = () => {
   const [groups, setGroups] = useState<string[][]>([]);
 
   const spinRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Handler to manually load class list
+  const handleLoadClassList = () => {
+      if (activeClass && activeClass.students.length > 0) {
+          setInputNames(activeClass.students.join('\n'));
+      } else {
+          alert("Lớp học hiện tại chưa có danh sách học sinh.");
+      }
+  };
 
   const namesList = inputNames
     .split(/\n|,/)
@@ -119,6 +133,16 @@ const RandomPicker: React.FC = () => {
             </button>
         </div>
         <div className="flex items-center gap-2">
+            {activeClass && (
+                <button 
+                    onClick={handleLoadClassList}
+                    className="flex items-center gap-1 px-2 py-1.5 bg-purple-500/20 hover:bg-purple-500 text-purple-100 hover:text-white rounded-lg transition-colors text-xs font-bold border border-purple-400/30"
+                    title={`Nạp danh sách từ lớp: ${activeClass.name}`}
+                >
+                    <FileDown className="w-4 h-4" />
+                    Nạp DS Lớp
+                </button>
+            )}
             <button 
                 onClick={() => {
                     setInputNames('');
